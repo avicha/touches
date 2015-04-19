@@ -16,6 +16,7 @@
             preventScrollLeft: true,
             preventScrollUp: false,
             preventScrollDown: false,
+            moveDetect: false
         };
         var touch = {},
             _longTapTimeout;
@@ -51,6 +52,19 @@
             touch.el.trigger('longTap');
             touch = {};
         };
+        var setPointInfo = function(point) {
+            touch.x2 = point.clientX;
+            touch.y2 = point.clientY;
+            touch.dx = touch.x2 - touch.x1;
+            touch.dy = touch.y2 - touch.y1;
+            touch.angle = getAngle(touch.dy / touch.dx);
+            touch.direction = getSwipeDirection(touch.dx, touch.dy, touch.angle);
+            touch.moveDirection = getMoveDirection(touch._lastX, touch._lastY, touch.x2, touch.y2);
+            touch._distanceX += Math.abs(touch.x2 - touch._lastX);
+            touch._distanceY += Math.abs(touch.y2 - touch._lastY);
+            touch._lastX = touch.x2;
+            touch._lastY = touch.y2;
+        };
         $(document).on('touchstart MSPointerDown pointerdown', function(e) {
             if (e.touches && e.touches.length === 1 && touch.x2) {
                 touch.x2 = undefined;
@@ -78,18 +92,11 @@
                 touch.mutiTouch = false;
             }
             cancelLongTap();
-            touch.x2 = point.clientX;
-            touch.y2 = point.clientY;
-            touch.dx = touch.x2 - touch.x1;
-            touch.dy = touch.y2 - touch.y1;
-            touch.angle = getAngle(touch.dy / touch.dx);
-            touch.direction = getSwipeDirection(touch.dx, touch.dy, touch.angle);
-            touch.moveDirection = getMoveDirection(touch._lastX, touch._lastY, touch.x2, touch.y2);
-            touch._distanceX += Math.abs(touch.x2 - touch._lastX);
-            touch._distanceY += Math.abs(touch.y2 - touch._lastY);
-            touch._lastX = touch.x2;
-            touch._lastY = touch.y2;
-            touch.el.trigger('move' + touch.moveDirection, [touch]);
+            setPointInfo(point);
+            if (defaultConfig.moveDetect) {
+                touch.el.trigger('move', [touch]);
+                touch.el.trigger('move' + touch.moveDirection, [touch]);
+            }
             if (defaultConfig['preventScroll' + touch.direction]) {
                 e.preventDefault();
             }
@@ -97,14 +104,7 @@
             cancelLongTap();
             if (e.changedTouches && e.changedTouches.length) {
                 var point = e.changedTouches[0];
-                touch.x2 = point.clientX;
-                touch.y2 = point.clientY;
-                touch.dx = touch.x2 - touch.x1;
-                touch.dy = touch.y2 - touch.y1;
-                touch.angle = getAngle(touch.dy / touch.dx);
-                touch.direction = getSwipeDirection(touch.dx, touch.dy, touch.angle);
-                touch._distanceX += Math.abs(touch.x2 - touch._lastX);
-                touch._distanceY += Math.abs(touch.y2 - touch._lastY);
+                setPointInfo(point);
             }
             if (((touch.direction === 'Left' || touch.direction === 'Right') && Math.abs(touch.dx) > defaultConfig.swipeMinX) || ((touch.direction === 'Up' || touch.direction === 'Down') && Math.abs(touch.dy) > defaultConfig.swipeMinY)) {
                 touch.swipeTimeout = setTimeout(function() {
